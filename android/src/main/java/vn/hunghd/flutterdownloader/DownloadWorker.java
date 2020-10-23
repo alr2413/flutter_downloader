@@ -79,7 +79,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
 
 
     private static final String TAG = DownloadWorker.class.getSimpleName();
-    private static final int BUFFER_SIZE = 4096;
+    private static final int BUFFER_SIZE = 8192;//4096;
     private static final String CHANNEL_ID = "FLUTTER_DOWNLOADER_NOTIFICATION";
     // private static final int STEP_UPDATE = 10;
 
@@ -213,7 +213,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
             taskDao = null;
             return Result.success();
         } catch (Exception e) {
-            log( "doWork() " + e.getMessage());
+            log("doWork() " + e.getMessage());
             updateNotification(context, title, DownloadStatus.FAILED, -1, null);
             taskDao.updateTask(getId().toString(), DownloadStatus.FAILED, lastProgress);
             e.printStackTrace();
@@ -358,8 +358,10 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
 
                 long count = downloadedBytes;
                 int bytesRead = -1;
+                //
                 byte[] buffer = new byte[BUFFER_SIZE];
                 while ((bytesRead = inputStream.read(buffer)) != -1 && !isStopped()) {
+                    log("bytesRead = " + bytesRead);
                     count += bytesRead;
                     int progress = (int) ((count * 100) / (contentLength + downloadedBytes));
                     outputStream.write(buffer, 0, bytesRead);
@@ -373,11 +375,20 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                         // but commenting this line causes tasks loaded from DB missing current downloading progress,
                         // however, this missing data should be temporary and it will be updated as soon as
                         // a new bunch of data fetched and a notification sent
-                        log("downloadProgress = " + String.valueOf(progress));
+                        log("downloadProgress = " + progress);
                         taskDao.updateTask(getId().toString(), DownloadStatus.RUNNING, progress);
                     }
                 }
+                // Publish update again since the loop may have skipped the last publish update
+                updateNotification(context, title, DownloadStatus.RUNNING, lastProgress, null);
 
+                // flushing output
+                try {
+                    outputStream.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                //
                 DownloadTask task = taskDao.loadTask(getId().toString());
                 int progress = isStopped() && task.resumable ? lastProgress : 100;
                 int status = isStopped() ? (task.resumable ? DownloadStatus.PAUSED : DownloadStatus.CANCELED) : DownloadStatus.COMPLETE;
