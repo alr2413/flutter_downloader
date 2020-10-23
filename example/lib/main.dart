@@ -98,7 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
       'name': 'Big Buck Bunny',
       'link':
           // 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
-          'http://dl3.mojdl.com/upload/Movies/2020/Bad%20Boys%20for%20Life/Bad.Boys.for.Life.2020.480p.WEB-DL.PAHE.%5BMojoo%5D.mkv'
+          'https://tci3.dlvagaye.ir/TV/Witchs%20Love/fasl1/Witchs.Love.E06.HardSub.%5B30NAMATAK%5D.mkv'
     },
     {
       'name': 'Elephant Dream',
@@ -120,7 +120,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     _bindBackgroundIsolate();
 
-    FlutterDownloader.registerCallback(downloadCallback);
+    FlutterDownloader.registerCallback(downloadCallback, stepSize: 1);
 
     _isLoading = true;
     _permissionReady = false;
@@ -275,6 +275,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _requestDownload(_TaskInfo task) async {
     task.taskId = await FlutterDownloader.enqueue(
         url: task.link,
+        title: task.name,
         headers: {"auth": "test_for_sql_encoding"},
         savedDir: _localPath,
         showNotification: true,

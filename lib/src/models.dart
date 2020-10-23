@@ -41,22 +41,31 @@ class DownloadTask {
   final DownloadTaskStatus status;
   final int progress;
   final String url;
+  final String title;
   final String filename;
+  final int fileSize;
   final String mimeType;
+  final String headers;
   final String savedDir;
   final int timeCreated;
+  final String extras;
 
-  DownloadTask(
-      {this.taskId,
-      this.status,
-      this.progress,
-      this.url,
-      this.filename,
-      this.mimeType,
-      this.savedDir,
-      this.timeCreated});
+  DownloadTask({
+    this.taskId,
+    this.status,
+    this.progress,
+    this.url,
+    this.title,
+    this.filename,
+    this.fileSize,
+    this.mimeType,
+    this.headers,
+    this.savedDir,
+    this.timeCreated,
+    this.extras,
+  });
 
   @override
   String toString() =>
-      "DownloadTask(taskId: $taskId, status: $status, progress: $progress, url: $url, filename: $filename, mimeType: $mimeType, savedDir: $savedDir, timeCreated: $timeCreated)";
+      "DownloadTask(taskId: $taskId, status: $status, progress: $progress, url: $url, title: $title, filename: $filename, fileSize: $fileSize, mimeType: $mimeType, headers: $headers, savedDir: $savedDir, timeCreated: $timeCreated, extras: $extras)";
 }

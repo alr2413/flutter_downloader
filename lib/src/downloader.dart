@@ -65,9 +65,11 @@ class FlutterDownloader {
   static Future<String> enqueue(
       {@required String url,
       @required String savedDir,
+      String title,
       String fileName,
       String mimeType = "",
       Map<String, String> headers,
+      String extras,
       bool showNotification = true,
       bool openFileFromNotification = true,
       bool requiresStorageNotLow = true}) async {
@@ -87,9 +89,11 @@ class FlutterDownloader {
       String taskId = await _channel.invokeMethod('enqueue', {
         'url': url,
         'saved_dir': savedDir,
+        'title': title,
         'file_name': fileName,
         'mime_type': mimeType,
         'headers': headerBuilder.toString(),
+        'extras': extras,
         'show_notification': showNotification,
         'open_file_from_notification': openFileFromNotification,
         'requires_storage_not_low': requiresStorageNotLow,
@@ -115,14 +119,18 @@ class FlutterDownloader {
       List<dynamic> result = await _channel.invokeMethod('loadTasks');
       return result
           .map((item) => new DownloadTask(
-              taskId: item['task_id'],
-              status: DownloadTaskStatus(item['status']),
-              progress: item['progress'],
-              url: item['url'],
-              filename: item['file_name'],
-              mimeType: item['mime_type'],
-              savedDir: item['saved_dir'],
-              timeCreated: item['time_created']))
+                taskId: item['task_id'],
+                status: DownloadTaskStatus(item['status']),
+                progress: item['progress'],
+                url: item['url'],
+                title: item['title'],
+                filename: item['file_name'],
+                fileSize: item['file_size'],
+                mimeType: item['mime_type'],
+                savedDir: item['saved_dir'],
+                timeCreated: item['time_created'],
+                extras: item['extras'],
+              ))
           .toList();
     } on PlatformException catch (e) {
       print(e.message);
@@ -159,14 +167,19 @@ class FlutterDownloader {
           .invokeMethod('loadTasksWithRawQuery', {'query': query});
       return result
           .map((item) => new DownloadTask(
-              taskId: item['task_id'],
-              status: DownloadTaskStatus(item['status']),
-              progress: item['progress'],
-              url: item['url'],
-              filename: item['file_name'],
-              mimeType: item['mime_type'],
-              savedDir: item['saved_dir'],
-              timeCreated: item['time_created']))
+                taskId: item['task_id'],
+                status: DownloadTaskStatus(item['status']),
+                progress: item['progress'],
+                url: item['url'],
+                title: item['title'],
+                filename: item['file_name'],
+                fileSize: item['file_size'],
+                mimeType: item['mime_type'],
+                headers: item['headers'],
+                savedDir: item['saved_dir'],
+                timeCreated: item['time_created'],
+                extras: item['extras'],
+              ))
           .toList();
     } on PlatformException catch (e) {
       print(e.message);
