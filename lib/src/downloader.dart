@@ -66,6 +66,7 @@ class FlutterDownloader {
       {@required String url,
       @required String savedDir,
       String fileName,
+      String mimeType = "",
       Map<String, String> headers,
       bool showNotification = true,
       bool openFileFromNotification = true,
@@ -87,6 +88,7 @@ class FlutterDownloader {
         'url': url,
         'saved_dir': savedDir,
         'file_name': fileName,
+        'mime_type': mimeType,
         'headers': headerBuilder.toString(),
         'show_notification': showNotification,
         'open_file_from_notification': openFileFromNotification,
@@ -118,6 +120,7 @@ class FlutterDownloader {
               progress: item['progress'],
               url: item['url'],
               filename: item['file_name'],
+              mimeType: item['mime_type'],
               savedDir: item['saved_dir'],
               timeCreated: item['time_created']))
           .toList();
@@ -161,6 +164,7 @@ class FlutterDownloader {
               progress: item['progress'],
               url: item['url'],
               filename: item['file_name'],
+              mimeType: item['mime_type'],
               savedDir: item['saved_dir'],
               timeCreated: item['time_created']))
           .toList();
