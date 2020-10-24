@@ -150,6 +150,8 @@ class _MyHomePageState extends State<MyHomePage> {
       DownloadTaskStatus status = data[1];
       int progress = data[2];
       int speed = data[3];
+      int downloaded = data[4];
+      int total = data[5];
 
       final task = _tasks?.firstWhere((task) => task.taskId == id);
       if (task != null) {
@@ -157,6 +159,8 @@ class _MyHomePageState extends State<MyHomePage> {
           task.status = status;
           task.progress = progress;
           task.speed = speed;
+          task.downloaded = downloaded;
+          task.total = total;
         });
       }
     });
@@ -166,15 +170,15 @@ class _MyHomePageState extends State<MyHomePage> {
     IsolateNameServer.removePortNameMapping('downloader_send_port');
   }
 
-  static void downloadCallback(
-      String id, DownloadTaskStatus status, int progress, int speed) {
+  static void downloadCallback(String id, DownloadTaskStatus status,
+      int progress, int speed, int downloaded, int total) {
     if (debug) {
       print(
-          'Background Isolate Callback: task ($id) is in status ($status) and process ($progress) and speed ($speed)');
+          'Background Isolate Callback: task ($id) is in status ($status) and process ($progress) and speed ($speed) and downloaded ($downloaded) and total ($total)');
     }
     final SendPort send =
         IsolateNameServer.lookupPortByName('downloader_send_port');
-    send.send([id, status, progress, speed]);
+    send.send([id, status, progress, speed, downloaded, total]);
   }
 
   @override
@@ -418,30 +422,45 @@ class DownloadItem extends StatelessWidget {
           children: <Widget>[
             Container(
               width: double.infinity,
-              height: 64.0,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      data.name,
-                      maxLines: 1,
-                      softWrap: true,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+              height: 80.0,
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          data.name,
+                          maxLines: 1,
+                          softWrap: true,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: _buildActionForTask(data.task),
+                      ),
+                    ],
                   ),
-                  data.task.status == DownloadTaskStatus.running
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                          child: Text(
-                            '${data.task.speed ~/ 1024} KB/s',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        )
-                      : Container(),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: _buildActionForTask(data.task),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: Text(
+                          '${data.task.downloaded ~/ 1024} KB of ${data.task.total ~/ 1024} KB',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: Text(
+                          '${data.task.speed ~/ 1024} KB/s',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -554,6 +573,8 @@ class _TaskInfo {
   int progress = 0;
   DownloadTaskStatus status = DownloadTaskStatus.undefined;
   int speed = 0;
+  int downloaded = 0;
+  int total = 0;
 
   _TaskInfo({this.name, this.link});
 }

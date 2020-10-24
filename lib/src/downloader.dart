@@ -16,8 +16,8 @@ import 'models.dart';
 /// * `progress`: current progress value of a download task, the value is in
 /// range of 0 and 100
 ///
-typedef void DownloadCallback(
-    String id, DownloadTaskStatus status, int progress, int speed);
+typedef void DownloadCallback(String id, DownloadTaskStatus status,
+    int progress, int speed, int downloaded, int total);
 
 ///
 /// A convenient class wraps all api functions of **FlutterDownloader** plugin
@@ -413,7 +413,10 @@ class FlutterDownloader {
           int status = call.arguments['status'];
           int process = call.arguments['progress'];
           int speed = call.arguments['speed'];
-          callback(id, DownloadTaskStatus(status), process, speed);
+          int downloaded = call.arguments['downloaded'];
+          int total = call.arguments['total'];
+          callback(id, DownloadTaskStatus(status), process, speed, downloaded,
+              total);
         }
         return null;
       });
