@@ -17,7 +17,7 @@ import 'models.dart';
 /// range of 0 and 100
 ///
 typedef void DownloadCallback(
-    String id, DownloadTaskStatus status, int progress);
+    String id, DownloadTaskStatus status, int progress, int speed);
 
 ///
 /// A convenient class wraps all api functions of **FlutterDownloader** plugin
@@ -127,6 +127,7 @@ class FlutterDownloader {
                 filename: item['file_name'],
                 fileSize: item['file_size'],
                 mimeType: item['mime_type'],
+                headers: item['headers'],
                 savedDir: item['saved_dir'],
                 timeCreated: item['time_created'],
                 extras: item['extras'],
@@ -411,7 +412,8 @@ class FlutterDownloader {
           String id = call.arguments['task_id'];
           int status = call.arguments['status'];
           int process = call.arguments['progress'];
-          callback(id, DownloadTaskStatus(status), process);
+          int speed = call.arguments['speed'];
+          callback(id, DownloadTaskStatus(status), process, speed);
         }
         return null;
       });

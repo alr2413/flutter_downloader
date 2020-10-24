@@ -20,8 +20,9 @@ void callbackDispatcher() {
     final String id = args[1];
     final int status = args[2];
     final int progress = args[3];
+    final int speed = args[4];
 
-    callback(id, DownloadTaskStatus(status), progress);
+    callback(id, DownloadTaskStatus(status), progress, speed);
   });
 
   backgroundChannel.invokeMethod('didInitializeDispatcher');

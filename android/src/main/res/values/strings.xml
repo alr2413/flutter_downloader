@@ -6,4 +6,7 @@
     <string name="flutter_downloader_notification_failed">failed</string>
     <string name="flutter_downloader_notification_complete">complete</string>
     <string name="flutter_downloader_notification_paused">paused</string>
+    <string name="flutter_downloader_notification_button_pause">Pause</string>
+    <string name="flutter_downloader_notification_button_resume">Resume</string>
+    <string name="flutter_downloader_notification_button_cancel">Cancel</string>
 </resources>

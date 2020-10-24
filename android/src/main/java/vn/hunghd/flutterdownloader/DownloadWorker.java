@@ -10,7 +10,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
@@ -27,12 +30,15 @@ import android.util.Log;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.FileNameMap;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -50,6 +56,7 @@ import androidx.work.ForegroundInfo;
 
 import android.util.Base64;
 import android.app.Notification;
+import android.webkit.MimeTypeMap;
 
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -97,8 +104,11 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
     private boolean clickToOpenDownloadedFile;
     private boolean debug;
     private int lastProgress = 0;
+
     private int primaryId;
     private String msgStarted, msgInProgress, msgCanceled, msgFailed, msgPaused, msgComplete;
+    private String buttonPause, buttonResume, buttonCancel;
+    private NotificationCompat.Action actionPause, actionResume, actionCancel;
     private int stepUpdate;
 
     public DownloadWorker(@NonNull final Context context,
@@ -190,7 +200,11 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
         msgFailed = res.getString(R.string.flutter_downloader_notification_failed);
         msgPaused = res.getString(R.string.flutter_downloader_notification_paused);
         msgComplete = res.getString(R.string.flutter_downloader_notification_complete);
-
+        //
+        buttonPause = res.getString(R.string.flutter_downloader_notification_button_pause);
+        buttonResume = res.getString(R.string.flutter_downloader_notification_button_resume);
+        buttonCancel = res.getString(R.string.flutter_downloader_notification_button_cancel);
+        //
         log("DownloadWorker{url=" + url + ",filename=" + filename + ",mimeType=" + mimeType + ",savedDir=" + savedDir + ",header=" + headers + ",isResume=" + isResume);
 
         showNotification = getInputData().getBoolean(ARG_SHOW_NOTIFICATION, false);
@@ -203,7 +217,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
         if (title == null || title.isEmpty()) {
             title = filename == null ? url : filename;
         }
-        updateNotification(context, title, DownloadStatus.RUNNING, task.progress, null);
+        updateNotification(context, title, DownloadStatus.RUNNING, task.progress, 0, null);
         taskDao.updateTask(getId().toString(), DownloadStatus.RUNNING, 0);
 
         try {
@@ -214,7 +228,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
             return Result.success();
         } catch (Exception e) {
             log("doWork() " + e.getMessage());
-            updateNotification(context, title, DownloadStatus.FAILED, -1, null);
+            updateNotification(context, title, DownloadStatus.FAILED, -1, 0, null);
             taskDao.updateTask(getId().toString(), DownloadStatus.FAILED, lastProgress);
             e.printStackTrace();
             dbHelper = null;
@@ -289,7 +303,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                 httpConn.setConnectTimeout(45000);
                 httpConn.setReadTimeout(45000);
                 httpConn.setInstanceFollowRedirects(false);   // Make the logic below easier to detect redirections
-                httpConn.setRequestProperty("User-Agent", "Mozilla/5.0...");
+                httpConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36");
 
                 // setup request headers if it is set
                 setupHeaders(httpConn, headers);
@@ -324,6 +338,9 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                 log("Content-Type = " + contentType);
                 log("Content-Length = " + contentLength);
                 //
+                if (contentLength <= 0)
+                    throw new IOException("Invalid Content Length");
+                //
                 fileSize = contentLength + downloadedBytes;
                 //
                 String charset = getCharsetFromContentType(contentType);
@@ -344,9 +361,18 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                     }
                 }
                 saveFilePath = savedDir + File.separator + filename;
-
+                //
                 log("fileName = " + filename);
-
+                //
+                // detect mime type from url
+//                String extension = MimeTypeMap.getFileExtensionFromUrl(url);
+//                if (extension != null) {
+//                    contentType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+//                }
+                // detect mime type from provided filename
+                FileNameMap fileNameMap = URLConnection.getFileNameMap();
+                contentType = fileNameMap.getContentTypeFor(filename);
+                //
                 String fileMimeType = (mimeType == null || mimeType.isEmpty()) ? contentType : mimeType;
                 taskDao.updateTask(getId().toString(), filename, fileSize, fileMimeType);
 
@@ -358,10 +384,13 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
 
                 long count = downloadedBytes;
                 int bytesRead = -1;
+                long lastSpeed = 0;
+                long lastCount = count;
+                long lastTime = System.currentTimeMillis();
                 //
                 byte[] buffer = new byte[BUFFER_SIZE];
                 while ((bytesRead = inputStream.read(buffer)) != -1 && !isStopped()) {
-                    log("bytesRead = " + bytesRead);
+//                    log("bytesRead = " + bytesRead);
                     count += bytesRead;
                     int progress = (int) ((count * 100) / (contentLength + downloadedBytes));
                     outputStream.write(buffer, 0, bytesRead);
@@ -369,7 +398,14 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                     if ((lastProgress == 0 || progress >= (lastProgress + stepUpdate) || progress == 100)
                             && progress != lastProgress) {
                         lastProgress = progress;
-                        updateNotification(context, title, DownloadStatus.RUNNING, progress, null);
+                        // calculate download speed = (downloadedbytes) / (nowTime - lastTime)
+                        long nowTime = System.currentTimeMillis();
+                        if ((nowTime - lastTime) > 0) {
+                            lastSpeed = (long) (1000 * (count - lastCount) / (nowTime - lastTime)); // Bytes per second
+                            lastCount = count;
+                            lastTime = nowTime;
+                        }
+                        updateNotification(context, title, DownloadStatus.RUNNING, progress, lastSpeed, null);
 
                         // This line possibly causes system overloaded because of accessing to DB too many ?!!!
                         // but commenting this line causes tasks loaded from DB missing current downloading progress,
@@ -380,7 +416,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                     }
                 }
                 // Publish update again since the loop may have skipped the last publish update
-                updateNotification(context, title, DownloadStatus.RUNNING, lastProgress, null);
+                updateNotification(context, title, DownloadStatus.RUNNING, lastProgress, lastSpeed, null);
 
                 // flushing output
                 try {
@@ -409,20 +445,21 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                         }
                     }
                 }
-                updateNotification(context, title, status, progress, pendingIntent);
+                updateNotification(context, title, status, progress, 0, pendingIntent);
                 taskDao.updateTask(getId().toString(), status, progress);
 
                 log(isStopped() ? "Download canceled" : "File downloaded");
             } else {
                 DownloadTask task = taskDao.loadTask(getId().toString());
                 int status = isStopped() ? (task.resumable ? DownloadStatus.PAUSED : DownloadStatus.CANCELED) : DownloadStatus.FAILED;
-                updateNotification(context, title, status, -1, null);
+                updateNotification(context, title, status, -1, 0, null);
                 taskDao.updateTask(getId().toString(), status, lastProgress);
                 log(isStopped() ? "Download canceled" : "Server replied HTTP code: " + responseCode);
             }
         } catch (IOException e) {
             Log.d(TAG, "downloadFile() " + e.getMessage());
-            updateNotification(context, title, DownloadStatus.FAILED, -1, null);
+            updateNotification(context, title, DownloadStatus.FAILED, -1, 0, null);
+            log("last progress" + lastProgress);
             taskDao.updateTask(getId().toString(), DownloadStatus.FAILED, lastProgress);
             e.printStackTrace();
         } finally {
@@ -448,7 +485,8 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
 
     private void cleanUp() {
         DownloadTask task = taskDao.loadTask(getId().toString());
-        if (task != null && task.status != DownloadStatus.COMPLETE && !task.resumable) {
+        // keep failed tasks because it could be due to the network issue -> user need to manually delete theme
+        if ((task != null) && (task.status != DownloadStatus.COMPLETE) && (task.status != DownloadStatus.FAILED) && !task.resumable) {
             String filename = task.filename;
             if (filename == null) {
                 filename = task.url.substring(task.url.lastIndexOf("/") + 1, task.url.length());
@@ -482,24 +520,38 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
             }
         }
 
+        // Create notification actions
+        actionPause = new NotificationCompat.Action(android.R.drawable.ic_media_pause, buttonPause, null);
+        actionResume = new NotificationCompat.Action(android.R.drawable.ic_media_play, buttonResume, null);
+        actionCancel = new NotificationCompat.Action(android.R.drawable.ic_menu_close_clear_cancel, buttonCancel, null);
+
         // Create the notification
         builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_download)
                 .setOnlyAlertOnce(true)
                 .setAutoCancel(true)
+                .setColorized(true)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+        // Set app icon
+//        Drawable drawable = getApplicationContext().getPackageManager().getApplicationIcon(getApplicationContext().getApplicationInfo());
+//        if (drawable != null)
+//            builder.setLargeIcon(((BitmapDrawable) drawable).getBitmap());
 
         return new ForegroundInfo(primaryId, builder.build());
     }
 
-    private void updateNotification(Context context, String title, int status, int progress, PendingIntent intent) {
+    private void updateNotification(Context context, String title, int status, int progress, long speed, PendingIntent intent) {
         builder.setContentTitle(title);
         builder.setContentIntent(intent);
+        builder.setGroupSummary(true);
+
         boolean shouldUpdate = false;
 
         if (status == DownloadStatus.RUNNING) {
             shouldUpdate = true;
             builder.setContentText(progress == 0 ? msgStarted : msgInProgress)
+                    .setSubText(progress + "%")
                     .setProgress(100, progress, progress == 0);
             builder.setOngoing(true)
                     .setSmallIcon(android.R.drawable.stat_sys_download);
@@ -525,21 +577,23 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                     .setSmallIcon(android.R.drawable.stat_sys_download_done);
         }
 
+
         // Show the notification
         if (showNotification && shouldUpdate) {
             NotificationManagerCompat.from(context).notify(primaryId, builder.build());
         }
 
-        sendUpdateProcessEvent(status, progress);
+        sendUpdateProcessEvent(status, progress, speed);
     }
 
-    private void sendUpdateProcessEvent(int status, int progress) {
+    private void sendUpdateProcessEvent(int status, int progress, long speed) {
         final List<Object> args = new ArrayList<>();
         long callbackHandle = getInputData().getLong(ARG_CALLBACK_HANDLE, 0);
         args.add(callbackHandle);
         args.add(getId().toString());
         args.add(status);
         args.add(progress);
+        args.add(speed);
 
         synchronized (isolateStarted) {
             if (!isolateStarted.get()) {

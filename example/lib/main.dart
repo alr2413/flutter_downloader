@@ -149,12 +149,14 @@ class _MyHomePageState extends State<MyHomePage> {
       String id = data[0];
       DownloadTaskStatus status = data[1];
       int progress = data[2];
+      int speed = data[3];
 
       final task = _tasks?.firstWhere((task) => task.taskId == id);
       if (task != null) {
         setState(() {
           task.status = status;
           task.progress = progress;
+          task.speed = speed;
         });
       }
     });
@@ -165,14 +167,14 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   static void downloadCallback(
-      String id, DownloadTaskStatus status, int progress) {
+      String id, DownloadTaskStatus status, int progress, int speed) {
     if (debug) {
       print(
-          'Background Isolate Callback: task ($id) is in status ($status) and process ($progress)');
+          'Background Isolate Callback: task ($id) is in status ($status) and process ($progress) and speed ($speed)');
     }
     final SendPort send =
         IsolateNameServer.lookupPortByName('downloader_send_port');
-    send.send([id, status, progress]);
+    send.send([id, status, progress, speed]);
   }
 
   @override
@@ -428,6 +430,15 @@ class DownloadItem extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  data.task.status == DownloadTaskStatus.running
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: Text(
+                            '${data.task.speed ~/ 1024} KB/s',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        )
+                      : Container(),
                   Padding(
                     padding: const EdgeInsets.only(left: 8.0),
                     child: _buildActionForTask(data.task),
@@ -542,6 +553,7 @@ class _TaskInfo {
   String taskId;
   int progress = 0;
   DownloadTaskStatus status = DownloadTaskStatus.undefined;
+  int speed = 0;
 
   _TaskInfo({this.name, this.link});
 }
