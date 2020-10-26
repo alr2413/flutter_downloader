@@ -153,15 +153,17 @@ class _MyHomePageState extends State<MyHomePage> {
       int downloaded = data[4];
       int total = data[5];
 
-      final task = _tasks?.firstWhere((task) => task.taskId == id);
-      if (task != null) {
-        setState(() {
-          task.status = status;
-          task.progress = progress;
-          task.speed = speed;
-          task.downloaded = downloaded;
-          task.total = total;
-        });
+      if (_tasks != null && _tasks.isNotEmpty) {
+        final task = _tasks?.firstWhere((task) => task.taskId == id);
+        if (task != null) {
+          setState(() {
+            task.status = status;
+            task.progress = progress;
+            task.speed = speed;
+            task.downloaded = downloaded;
+            task.total = total;
+          });
+        }
       }
     });
   }
@@ -559,6 +561,8 @@ class DownloadItem extends StatelessWidget {
           )
         ],
       );
+    } else if (task.status == DownloadTaskStatus.enqueued) {
+      return Text('Pending', style: TextStyle(color: Colors.orange));
     } else {
       return null;
     }
