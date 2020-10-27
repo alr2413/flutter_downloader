@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -69,7 +70,7 @@ class FlutterDownloader {
       String fileName,
       String mimeType = "",
       Map<String, String> headers,
-      String extras,
+      Map<String, dynamic> extras,
       bool showNotification = true,
       bool openFileFromNotification = true,
       bool requiresStorageNotLow = true}) async {
@@ -85,6 +86,10 @@ class FlutterDownloader {
           ',');
       headerBuilder.write('}');
     }
+    String encodedExtras;
+    if (extras != null) {
+      encodedExtras = jsonEncode(extras);
+    }
     try {
       String taskId = await _channel.invokeMethod('enqueue', {
         'url': url,
@@ -93,7 +98,7 @@ class FlutterDownloader {
         'file_name': fileName,
         'mime_type': mimeType,
         'headers': headerBuilder.toString(),
-        'extras': extras,
+        'extras': encodedExtras,
         'show_notification': showNotification,
         'open_file_from_notification': openFileFromNotification,
         'requires_storage_not_low': requiresStorageNotLow,
@@ -130,7 +135,9 @@ class FlutterDownloader {
                 headers: item['headers'],
                 savedDir: item['saved_dir'],
                 timeCreated: item['time_created'],
-                extras: item['extras'],
+                extras: item['extras'] != null
+                    ? (jsonDecode(item['extras']) as Map<String, dynamic>)
+                    : null,
               ))
           .toList();
     } on PlatformException catch (e) {
@@ -179,7 +186,9 @@ class FlutterDownloader {
                 headers: item['headers'],
                 savedDir: item['saved_dir'],
                 timeCreated: item['time_created'],
-                extras: item['extras'],
+                extras: item['extras'] != null
+                    ? (jsonDecode(item['extras']) as Map<String, dynamic>)
+                    : null,
               ))
           .toList();
     } on PlatformException catch (e) {

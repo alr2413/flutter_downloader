@@ -285,6 +285,10 @@ class _MyHomePageState extends State<MyHomePage> {
         url: task.link,
         title: task.name,
         headers: {"auth": "test_for_sql_encoding"},
+        extras: {
+          "storage": "picture",
+          "cover": "url",
+        },
         savedDir: _localPath,
         showNotification: true,
         openFileFromNotification: true);
@@ -376,6 +380,7 @@ class _MyHomePageState extends State<MyHomePage> {
           info.taskId = task.taskId;
           info.status = task.status;
           info.progress = task.progress;
+          info.extras = task.extras;
         }
       }
     });
@@ -412,6 +417,7 @@ class DownloadItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (data.task.extras != null) print(data.task.extras);
     return Container(
       padding: const EdgeInsets.only(left: 16.0, right: 8.0),
       child: InkWell(
@@ -579,6 +585,7 @@ class _TaskInfo {
   int speed = 0;
   int downloaded = 0;
   int total = 0;
+  Map<String, dynamic> extras;
 
   _TaskInfo({this.name, this.link});
 }

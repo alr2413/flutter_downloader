@@ -48,7 +48,7 @@ class DownloadTask {
   final String headers;
   final String savedDir;
   final int timeCreated;
-  final String extras;
+  final Map<String, dynamic> extras;
 
   DownloadTask({
     this.taskId,
