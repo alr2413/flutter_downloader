@@ -564,8 +564,6 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
     }
 
     private void updateNotification(Context context, String title, int status, int progress, long speed, long downloaded, long total, PendingIntent intent, boolean finalize) {
-        sendUpdateProcessEvent(status, progress, speed, downloaded, total);
-
         if (showNotification) {
 
             builder.setContentTitle(title);
@@ -635,6 +633,8 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
             NotificationManagerCompat.from(context).notify(primaryId, builder.build());
             lastCallUpdateNotification = System.currentTimeMillis();
         }
+        //
+        sendUpdateProcessEvent(status, progress, speed, downloaded, total);
     }
 
     private void sendUpdateProcessEvent(int status, int progress, long speed, long downloaded, long total) {
