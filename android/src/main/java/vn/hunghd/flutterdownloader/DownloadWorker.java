@@ -231,9 +231,9 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
             return Result.success();
         } catch (Exception e) {
             log("doWork() " + e.getMessage());
-            updateNotification(context, title, DownloadStatus.FAILED, -1, 0, lastDownloadedCount, task.fileSize, null, true);
+            updateNotification(context, title, DownloadStatus.FAILED, lastProgress, 0, lastDownloadedCount, task.fileSize, null, true);
             taskDao.updateTask(getId().toString(), DownloadStatus.FAILED, lastProgress);
-            e.printStackTrace();
+            // e.printStackTrace();
             dbHelper = null;
             taskDao = null;
             return Result.failure();
@@ -337,7 +337,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
 
             if ((responseCode == HttpURLConnection.HTTP_OK || (isResume && responseCode == HttpURLConnection.HTTP_PARTIAL)) && !isStopped()) {
                 String contentType = httpConn.getContentType();
-                int contentLength = httpConn.getContentLength();
+                long contentLength = httpConn.getContentLength();
                 log("Content-Type = " + contentType);
                 log("Content-Length = " + contentLength);
                 //
@@ -459,13 +459,13 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
             } else {
                 DownloadTask task = taskDao.loadTask(getId().toString());
                 int status = isStopped() ? (task.resumable ? DownloadStatus.PAUSED : DownloadStatus.CANCELED) : DownloadStatus.FAILED;
-                updateNotification(context, title, status, -1, 0, lastDownloadedCount, fileSize, null, true);
+                updateNotification(context, title, status, lastProgress, 0, lastDownloadedCount, fileSize, null, true);
                 taskDao.updateTask(getId().toString(), status, lastProgress);
                 log(isStopped() ? "Download canceled" : "Server replied HTTP code: " + responseCode);
             }
         } catch (IOException e) {
-            Log.d(TAG, "downloadFile() " + e.getMessage());
-            updateNotification(context, title, DownloadStatus.FAILED, -1, 0, lastDownloadedCount, fileSize, null, true);
+            // Log.d(TAG, "downloadFile() " + e.getMessage());
+            updateNotification(context, title, DownloadStatus.FAILED, lastProgress, 0, lastDownloadedCount, fileSize, null, true);
             log("last progress" + lastProgress);
             taskDao.updateTask(getId().toString(), DownloadStatus.FAILED, lastProgress);
             e.printStackTrace();
