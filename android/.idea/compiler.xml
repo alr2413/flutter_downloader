@@ -4,5 +4,8 @@
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="vn.hunghd.flutterdownloader.flutter_downloader" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>
