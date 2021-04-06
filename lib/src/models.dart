@@ -8,12 +8,6 @@ class DownloadTaskStatus {
 
   int get value => _value;
 
-  get hashCode => _value;
-
-  operator ==(status) => status._value == this._value;
-
-  toString() => 'DownloadTaskStatus($_value)';
-
   static DownloadTaskStatus from(int value) => DownloadTaskStatus(value);
 
   static const undefined = const DownloadTaskStatus(0);
@@ -23,6 +17,19 @@ class DownloadTaskStatus {
   static const failed = const DownloadTaskStatus(4);
   static const canceled = const DownloadTaskStatus(5);
   static const paused = const DownloadTaskStatus(6);
+
+  @override
+  bool operator ==(Object o) {
+    if (identical(this, o)) return true;
+
+    return o is DownloadTaskStatus && o._value == _value;
+  }
+
+  @override
+  int get hashCode => _value.hashCode;
+
+  @override
+  String toString() => 'DownloadTaskStatus($_value)';
 }
 
 ///
@@ -37,32 +44,32 @@ class DownloadTaskStatus {
 /// * [savedDir] the absolute path of the directory where the downloaded file is saved
 ///
 class DownloadTask {
-  final String taskId;
-  final DownloadTaskStatus status;
-  final int progress;
-  final String url;
-  final String title;
-  final String filename;
-  final int fileSize;
-  final String mimeType;
-  final String headers;
-  final String savedDir;
-  final int timeCreated;
-  final Map<String, dynamic> extras;
+  final String? taskId;
+  final DownloadTaskStatus? status;
+  final int? progress;
+  final String? url;
+  final String? title;
+  final String? filename;
+  final int? fileSize;
+  final String? mimeType;
+  final String? headers;
+  final String? savedDir;
+  final int? timeCreated;
+  final Map<String, dynamic>? extras;
 
   DownloadTask({
-    this.taskId,
-    this.status,
-    this.progress,
-    this.url,
-    this.title,
-    this.filename,
-    this.fileSize,
-    this.mimeType,
-    this.headers,
-    this.savedDir,
-    this.timeCreated,
-    this.extras,
+    required this.taskId,
+    required this.status,
+    required this.progress,
+    required this.url,
+    required this.title,
+    required this.filename,
+    required this.fileSize,
+    required this.mimeType,
+    required this.headers,
+    required this.savedDir,
+    required this.timeCreated,
+    required this.extras,
   });
 
   @override

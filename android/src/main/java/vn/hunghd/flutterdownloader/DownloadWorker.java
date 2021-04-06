@@ -331,7 +331,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                         log("Response with redirection code");
                         location = httpConn.getHeaderField("Location");
                         log("Location = " + location);
-                        base = new URL(fileURL);
+                        base = new URL(url);
                         next = new URL(base, location);  // Deal with relative URLs
                         url = next.toExternalForm();
                         log("New url: " + url);
@@ -345,7 +345,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
 
             if ((responseCode == HttpURLConnection.HTTP_OK || (isResume && responseCode == HttpURLConnection.HTTP_PARTIAL)) && !isStopped()) {
                 String contentType = httpConn.getContentType();
-                long contentLength = httpConn.getContentLength();
+                long contentLength = httpConn.getContentLengthLong();
                 log("Content-Type = " + contentType);
                 log("Content-Length = " + contentLength);
                 //
