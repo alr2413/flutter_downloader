@@ -225,12 +225,12 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
         updateNotification(context, title, DownloadStatus.RUNNING, task.progress, 0, lastDownloadedCount, task.fileSize, null, false);
         taskDao.updateTask(getId().toString(), DownloadStatus.RUNNING, task.progress);
 
-       //automatic resume for partial files. (if the workmanager unexpectedly quited in background)
+        //automatic resume for partial files. (if the workmanager unexpectedly quited in background)
         String saveFilePath = savedDir + File.separator + filename;
         File partialFile = new File(saveFilePath);
         if (partialFile.exists()) {
             isResume = true;
-            log("exists file for "+ filename + "automatic resuming...");
+            log("exists file for " + filename + "automatic resuming...");
         }
 
         try {
@@ -347,7 +347,12 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
 
             if ((responseCode == HttpURLConnection.HTTP_OK || (isResume && responseCode == HttpURLConnection.HTTP_PARTIAL)) && !isStopped()) {
                 String contentType = httpConn.getContentType();
-                long contentLength = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N ? httpConn.getContentLengthLong() : httpConn.getContentLength();
+                long contentLength;
+                try {
+                    contentLength = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N ? httpConn.getContentLengthLong() : httpConn.getContentLength();
+                } catch (Exception ex) {
+                    contentLength = httpConn.getContentLength();
+                }
                 log("Content-Type = " + contentType);
                 log("Content-Length = " + contentLength);
                 //
@@ -392,6 +397,9 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                 //
                 String fileMimeType = (mimeType == null || mimeType.isEmpty()) ? contentType : mimeType;
                 taskDao.updateTask(getId().toString(), filename, fileSize, fileMimeType);
+                //
+                // fix is resume feature of first downloaded files
+                taskDao.updateTask(getId().toString(), true);
 
                 // opens input stream from the HTTP connection
                 inputStream = httpConn.getInputStream();
@@ -578,7 +586,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
     }
 
     private void updateNotification(Context context, String title, int status, int progress, long speed, long downloaded, long total, PendingIntent intent, boolean finalize) {
-        
+
         if (showNotification) {
 
             builder.setContentTitle(title);
